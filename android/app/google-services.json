@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "81619253503",
+    "project_id": "stockify-f4f81",
+    "storage_bucket": "stockify-f4f81.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:81619253503:android:d7dd68e6dd10443625f4ca",
+        "android_client_info": {
+          "package_name": "com.example.stockify"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIodaodWYSPOX4_KveMZ6wqWpV2uX2nSY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
