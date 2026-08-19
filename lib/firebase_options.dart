@@ -56,7 +56,6 @@ class DefaultFirebaseOptions {
     projectId: 'stockify-f4f81',
     storageBucket: 'stockify-f4f81.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBe48cZ3ISb9MKc4ddRgklZJELN4coRfzE',
     appId: '1:81619253503:ios:961faefc2fa48a1925f4ca',
@@ -65,7 +64,6 @@ class DefaultFirebaseOptions {
     storageBucket: 'stockify-f4f81.firebasestorage.app',
     iosBundleId: 'com.example.stockify',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyBe48cZ3ISb9MKc4ddRgklZJELN4coRfzE',
     appId: '1:81619253503:ios:961faefc2fa48a1925f4ca',
