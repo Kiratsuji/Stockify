@@ -15,7 +15,7 @@ class WelcomeScreen extends StatelessWidget {
             children: [
               const Spacer(),
 
-              // --- SEÇÃO SUPERIOR ---
+              // --- SECAO SUPERIOR ---
               Column(
                 children: [
                   Icon(
@@ -35,10 +35,9 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-
               const Spacer(),
 
-              // --- SEÇÃO CENTRAL ---
+              // --- SECAO CENTRAL ---
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0),
                 child: Text(
@@ -52,7 +51,6 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
               const Spacer(),
 
               // --- SECAO INFERIOR ---
