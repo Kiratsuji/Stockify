@@ -1,7 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:stockify/firebase_options.dart';
+import 'package:stockify/screens/welcome.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,15 +21,9 @@ class MyApp extends StatelessWidget{
       debugShowCheckedModeBanner: false,
       title: 'Stockify',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.black),
+        colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF7C3AED)),
         useMaterial3: true,
       ),
-      home: Scaffold(
-        body: Center(
-          child: Text('Firebase Conectado!',
-            style: TextStyle(fontSize: 24))
-        ),
-      ),
-    );
+      home: WelcomeScreen());
   }
 }
