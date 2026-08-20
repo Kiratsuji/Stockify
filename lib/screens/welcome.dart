@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'login.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -8,14 +9,13 @@ class WelcomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF0D0B14),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+        child: Padding(padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Spacer(),
 
-              // --- SECAO SUPERIOR ---
+              // --- SUPERIOR SECTION ---
               Column(
                 children: [
                   Icon(
@@ -37,7 +37,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const Spacer(),
 
-              // --- SECAO CENTRAL ---
+              // --- CENTRAL SECTION ---
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0),
                 child: Text(
@@ -53,7 +53,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const Spacer(),
 
-              // --- SECAO INFERIOR ---
+              // --- INFERIOR SECTION ---
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -82,6 +82,8 @@ class WelcomeScreen extends StatelessWidget {
 
                   OutlinedButton(
                     onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(
+                          builder: (context) => const LoginScreen()));
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFC4B5FD),
