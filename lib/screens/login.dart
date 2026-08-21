@@ -73,11 +73,7 @@ class _LoginState extends State<LoginScreen>{
               ),
 
               const Spacer(),
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'E-Mail', border: OutlineInputBorder()),
-              ),
+              CommonTextField(controller: emailController, labelText: 'E-mail'),
               const SizedBox(height: 16),
               PasswordTextField(controller: passwordController),
               const Spacer(),

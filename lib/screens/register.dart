@@ -88,16 +88,8 @@ class _RegisterState extends State<RegisterScreen>{
                 ),
                 const Spacer(),
 
-                TextField(
-                  controller: usernameController,
-                  keyboardType: TextInputType.text,
-                  decoration: const InputDecoration(labelText: 'Nome', border: OutlineInputBorder()),
-                ),
-                TextField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'E-mail', border: OutlineInputBorder()),
-                ),
+                CommonTextField(controller: usernameController, labelText: 'Nome'),
+                CommonTextField(controller: emailController, labelText: 'E-mail'),
                 const SizedBox(height: 16),
                 PasswordTextField(controller: passwordController),
                 const SizedBox(height: 24),
