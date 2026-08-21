@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:stockify/screens/register.dart';
 import 'login.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -59,6 +60,8 @@ class WelcomeScreen extends StatelessWidget {
                 children: [
                   ElevatedButton(
                     onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(
+                          builder: (context) => const RegisterScreen()));
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF7C3AED),
