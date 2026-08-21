@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:stockify/screens/util/screenUtils.dart';
 import 'package:stockify/services/authService.dart';
 
 class RegisterScreen extends StatefulWidget{
@@ -11,8 +12,17 @@ class RegisterScreen extends StatefulWidget{
 class _RegisterState extends State<RegisterScreen>{
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController usernameController = TextEditingController();
 
   final AuthService _authService = AuthService();
+
+  @override
+  void dispose() {
+    emailController.dispose;
+    passwordController.dispose;
+    usernameController.dispose;
+    super.dispose();
+  }
 
   void userRegister() async{
     if(emailController.text.isEmpty || passwordController.text.isEmpty){
@@ -62,17 +72,34 @@ class _RegisterState extends State<RegisterScreen>{
                   ],
                 ),
                 const Spacer(),
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    'Comece a controlar seu estoque\nde forma simples.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      height: 1.5,
+                      color: Color(0xFFA1A1AA),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+
+                TextField(
+                  controller: usernameController,
+                  keyboardType: TextInputType.text,
+                  decoration: const InputDecoration(labelText: 'Nome', border: OutlineInputBorder()),
+                ),
                 TextField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(labelText: 'E-mail', border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Senha', border: OutlineInputBorder()),
-                ),
+                PasswordTextField(controller: passwordController),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,

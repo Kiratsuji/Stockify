@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:stockify/screens/dashboard.dart';
+import 'package:stockify/screens/util/screenUtils.dart';
 import '../services/authService.dart';
 
 class LoginScreen extends StatefulWidget{
@@ -78,11 +79,7 @@ class _LoginState extends State<LoginScreen>{
                 decoration: const InputDecoration(labelText: 'E-Mail', border: OutlineInputBorder()),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Senha', border: OutlineInputBorder()),
-              ),
+              PasswordTextField(controller: passwordController),
               const Spacer(),
               SizedBox(
                 width: double.infinity,
