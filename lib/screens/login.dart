@@ -31,7 +31,7 @@ class _LoginState extends State<LoginScreen>{
     }); //inicia o loading
     try{
       await _authService.login(emailController.text, passwordController.text);
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const Dashboard()));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const DashboardScreen()));
     }catch (e){
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
     }

@@ -31,7 +31,7 @@ class _RegisterState extends State<RegisterScreen>{
       return;
     }
     try{
-      await _authService.userSignUp(emailController.text, passwordController.text);
+      await _authService.userSignUp(emailController.text, passwordController.text, usernameController.text);
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Conta criada com sucesso!')));
@@ -89,9 +89,12 @@ class _RegisterState extends State<RegisterScreen>{
                 const Spacer(),
 
                 CommonTextField(controller: usernameController, labelText: 'Nome'),
+                const SizedBox(height: 16),
                 CommonTextField(controller: emailController, labelText: 'E-mail'),
                 const SizedBox(height: 16),
                 PasswordTextField(controller: passwordController),
+                const SizedBox(height: 16),
+
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -99,7 +102,7 @@ class _RegisterState extends State<RegisterScreen>{
                       onPressed: userRegister,
                       child: const Text('Criar conta')
                   ),
-                )
+                )  //
               ],
             ),
           )
