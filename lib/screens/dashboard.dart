@@ -23,10 +23,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _screens = [
-      const _DashboardHomeBody(), // Widget com o conteúdo da Dashboard principal
-      const ProductsScreen(),      // Tela de Produtos na posição index 1
-      const Center(child: Text('Tela de Movimentações', style: TextStyle(color: Colors.white))), // Exemplo para index 2
-      const Center(child: Text('Mais Opções', style: TextStyle(color: Colors.white))),             // Exemplo para index 3
+      const _DashboardHomeBody(),
+      const ProductsScreen(),
+      const Center(child: Text('Tela de Movimentações', style: TextStyle(color: Colors.white))),
+      const Center(child: Text('Mais Opções', style: TextStyle(color: Colors.white))),
     ];
   }
 
@@ -34,7 +34,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0D0B14),
-      // O body troca de tela de acordo com o index selecionado
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
@@ -43,7 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
-            _currentIndex = index; // Atualiza o índice para trocar a tela
+            _currentIndex = index;
           });
         },
         backgroundColor: const Color(0xFF181524),
