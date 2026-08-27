@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 import '../models/productModel.dart';
 import '../services/productService.dart';
 
+enum ProductFilter { all, lowStock, zeroStock }
+
 class ProductsScreen extends StatefulWidget {
-  const ProductsScreen({super.key});
+  final ProductFilter initialFilter;
+
+  const ProductsScreen({
+    super.key,
+    this.initialFilter = ProductFilter.all,
+  });
 
   @override
   State<ProductsScreen> createState() => _ProductsScreenState();
@@ -11,6 +18,22 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   final ProductService _productService = ProductService();
+  final TextEditingController _searchController = TextEditingController();
+
+  String _searchQuery = '';
+  late ProductFilter _selectedFilter;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedFilter = widget.initialFilter;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _openAddProductModal(BuildContext context) {
     final nameController = TextEditingController();
@@ -196,7 +219,125 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              // Campo de Busca + Menu Suspenso de Filtro
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF181524),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF262135)),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value.toLowerCase().trim();
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Pesquisar produto...',
+                          hintStyle: const TextStyle(color: Color(0xFF52525B)),
+                          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFA1A1AA)),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Color(0xFFA1A1AA), size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                              });
+                            },
+                          )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  // Botão de Filtro Estilizado (Menu Suspenso)
+                  PopupMenuButton<ProductFilter>(
+                    initialValue: _selectedFilter,
+                    tooltip: 'Filtrar produtos',
+                    onSelected: (ProductFilter filter) {
+                      setState(() {
+                        _selectedFilter = filter;
+                      });
+                    },
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: const BorderSide(color: Color(0xFF262135)),
+                    ),
+                    color: const Color(0xFF181524),
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: _selectedFilter != ProductFilter.all
+                            ? const Color(0xFF8B5CF6).withOpacity(0.2)
+                            : const Color(0xFF181524),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _selectedFilter != ProductFilter.all
+                              ? const Color(0xFF8B5CF6)
+                              : const Color(0xFF262135),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.filter_list_rounded,
+                        color: _selectedFilter != ProductFilter.all
+                            ? const Color(0xFF8B5CF6)
+                            : const Color(0xFFA1A1AA),
+                      ),
+                    ),
+                    itemBuilder: (BuildContext context) => [
+                      const PopupMenuItem<ProductFilter>(
+                        value: ProductFilter.lowStock,
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 18),
+                            SizedBox(width: 10),
+                            Text('Estoque Baixo', style: TextStyle(color: Colors.white, fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem<ProductFilter>(
+                        value: ProductFilter.zeroStock,
+                        child: Row(
+                          children: [
+                            Icon(Icons.remove_shopping_cart_outlined, color: Colors.redAccent, size: 18),
+                            SizedBox(width: 10),
+                            Text('Estoque Zerado', style: TextStyle(color: Colors.white, fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(height: 1),
+                      const PopupMenuItem<ProductFilter>(
+                        value: ProductFilter.all,
+                        child: Row(
+                          children: [
+                            Icon(Icons.clear_all_rounded, color: Color(0xFFA1A1AA), size: 18),
+                            SizedBox(width: 10),
+                            Text('Limpar Filtros', style: TextStyle(color: Color(0xFFA1A1AA), fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Lista de Produtos com Filtragem Aplicada
               Expanded(
                 child: StreamBuilder<List<Product>>(
                   stream: _productService.getProductsStream(),
@@ -209,23 +350,47 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       );
                     }
 
-                    final products = snapshot.data ?? [];
+                    final allProducts = snapshot.data ?? [];
 
-                    if (products.isEmpty) {
-                      return const Center(
+                    // Aplicação dos Filtros de Busca e Status de Estoque
+                    final filteredProducts = allProducts.where((product) {
+                      final matchesSearch = product.name.toLowerCase().contains(_searchQuery);
+
+                      bool matchesFilter = true;
+                      if (_selectedFilter == ProductFilter.lowStock) {
+                        matchesFilter = product.quantity <= product.minQuantity && product.quantity > 0;
+                      } else if (_selectedFilter == ProductFilter.zeroStock) {
+                        matchesFilter = product.quantity == 0;
+                      }
+
+                      return matchesSearch && matchesFilter;
+                    }).toList();
+
+                    if (filteredProducts.isEmpty) {
+                      return Center(
                         child: Text(
-                          'Nenhum produto cadastrado no estoque.',
-                          style: TextStyle(color: Color(0xFFA1A1AA), fontSize: 14),
+                          _searchQuery.isNotEmpty || _selectedFilter != ProductFilter.all
+                              ? 'Nenhum produto encontrado.'
+                              : 'Nenhum produto cadastrado no estoque.',
+                          style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 14),
                         ),
                       );
                     }
 
                     return ListView.builder(
-                      itemCount: products.length,
+                      itemCount: filteredProducts.length,
                       physics: const BouncingScrollPhysics(),
                       itemBuilder: (context, index) {
-                        final product = products[index];
+                        final product = filteredProducts[index];
+                        final isZeroStock = product.quantity == 0;
                         final isLowStock = product.quantity <= product.minQuantity;
+
+                        Color statusColor = const Color(0xFF8B5CF6);
+                        if (isZeroStock) {
+                          statusColor = Colors.redAccent;
+                        } else if (isLowStock) {
+                          statusColor = Colors.amberAccent;
+                        }
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -234,8 +399,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             color: const Color(0xFF181524),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: isLowStock
-                                  ? Colors.amber.withOpacity(0.4)
+                              color: isZeroStock || isLowStock
+                                  ? statusColor.withOpacity(0.4)
                                   : const Color(0xFF262135),
                             ),
                           ),
@@ -245,14 +410,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 width: 44,
                                 height: 44,
                                 decoration: BoxDecoration(
-                                  color: isLowStock
-                                      ? Colors.amber.withOpacity(0.15)
-                                      : const Color(0xFF8B5CF6).withOpacity(0.15),
+                                  color: statusColor.withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Icon(
                                   Icons.inventory_2_outlined,
-                                  color: isLowStock ? Colors.amberAccent : const Color(0xFF8B5CF6),
+                                  color: statusColor,
                                   size: 22,
                                 ),
                               ),
@@ -286,12 +449,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   Text(
                                     '${product.quantity} un',
                                     style: TextStyle(
-                                      color: isLowStock ? Colors.amberAccent : Colors.white,
+                                      color: isZeroStock || isLowStock ? statusColor : Colors.white,
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  if (isLowStock) ...[
+                                  if (isZeroStock) ...[
+                                    const SizedBox(height: 2),
+                                    const Text(
+                                      'Estoque Zerado',
+                                      style: TextStyle(
+                                        color: Colors.redAccent,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ] else if (isLowStock) ...[
                                     const SizedBox(height: 2),
                                     const Text(
                                       'Estoque Baixo',

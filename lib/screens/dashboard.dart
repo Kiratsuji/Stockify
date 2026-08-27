@@ -4,6 +4,7 @@ import 'package:stockify/screens/movementsScreen.dart';
 import 'package:stockify/screens/profileScreen.dart';
 import '../models/movementModel.dart';
 import '../models/productModel.dart';
+import '../services/authService.dart';
 import '../services/movementServices.dart';
 import '../services/productService.dart';
 import 'productsScreen.dart';
@@ -17,34 +18,112 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
+  ProductFilter _productsInitialFilter = ProductFilter.all;
+  final AuthService _authService = AuthService();
 
-  late final List<Widget> _screens;
+  void _navigateToProducts({ProductFilter filter = ProductFilter.all}) {
+    setState(() {
+      _productsInitialFilter = filter;
+      _currentIndex = 1;
+    });
+  }
 
-  @override
-  void initState() {
-    super.initState();
-    _screens = [
-      const _DashboardHomeBody(),
-      const ProductsScreen(),
-      const MovementsScreen(),
-      const ProfileScreen(),
-    ];
+  void _showMoreMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF181524),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF262135),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.person_outline_rounded, color: Color(0xFF8B5CF6)),
+                  title: const Text('Perfil', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.settings_outlined, color: Color(0xFF8B5CF6)),
+                  title: const Text('Configurações', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Tela de Configurações em desenvolvimento.'),
+                        backgroundColor: Color(0xFF181524),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(color: Color(0xFF262135)),
+                ListTile(
+                  leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                  title: const Text('Sair', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _authService.logout();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> screens = [
+      _DashboardHomeBody(
+        onNavigateToProducts: _navigateToProducts,
+      ),
+      ProductsScreen(
+        key: ValueKey(_productsInitialFilter),
+        initialFilter: _productsInitialFilter,
+      ),
+      const MovementsScreen(),
+    ];
+
     return Scaffold(
       backgroundColor: const Color(0xFF0D0B14),
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          if (index == 3) {
+            _showMoreMenu(context);
+          } else {
+            setState(() {
+              if (index == 1) {
+                _productsInitialFilter = ProductFilter.all;
+              }
+              _currentIndex = index;
+            });
+          }
         },
         backgroundColor: const Color(0xFF181524),
         selectedItemColor: const Color(0xFF8B5CF6),
@@ -64,8 +143,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label: 'Mov.',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded),
-            label: 'Perfil',
+            icon: Icon(Icons.more_horiz_rounded),
+            label: 'Mais',
           ),
         ],
       ),
@@ -74,7 +153,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class _DashboardHomeBody extends StatelessWidget {
-  const _DashboardHomeBody();
+  final Function({ProductFilter filter}) onNavigateToProducts;
+
+  const _DashboardHomeBody({required this.onNavigateToProducts});
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +170,11 @@ class _DashboardHomeBody extends StatelessWidget {
         stream: productService.getProductsStream(),
         builder: (context, snapshotProducts) {
           if (snapshotProducts.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
+              ),
+            );
           }
 
           final products = snapshotProducts.data ?? [];
@@ -188,26 +273,59 @@ class _DashboardHomeBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Cards Menores
+                // Cards Clicáveis
                 Row(
                   children: [
                     Expanded(
-                      child: _buildStatCard(
-                        value: '$totalProducts',
-                        label: 'Produtos',
-                        accentColor: const Color(0xFF8B5CF6),
+                      child: GestureDetector(
+                        onTap: () => onNavigateToProducts(filter: ProductFilter.all),
+                        child: _buildStatCard(
+                          value: '$totalProducts',
+                          label: 'Produtos',
+                          accentColor: const Color(0xFF8B5CF6),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: _buildStatCard(
-                        value: '$lowStockCount',
-                        label: 'Estoque baixo',
-                        accentColor: Colors.amberAccent,
+                      child: GestureDetector(
+                        onTap: () => onNavigateToProducts(filter: ProductFilter.lowStock),
+                        child: _buildStatCard(
+                          value: '$lowStockCount',
+                          label: 'Estoque baixo',
+                          accentColor: Colors.amberAccent,
+                        ),
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+
+                // Botão "Ver produtos" / "Ver tudo"
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: () => onNavigateToProducts(filter: ProductFilter.all),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF262135)),
+                      backgroundColor: const Color(0xFF181524),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.inventory_2_outlined, color: Color(0xFF8B5CF6), size: 18),
+                    label: const Text(
+                      'Ver todos os produtos',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 28),
 
                 // Seção de Movimentações Recentes
@@ -226,7 +344,11 @@ class _DashboardHomeBody extends StatelessWidget {
                   builder: (context, snapshotMovements) {
                     if (snapshotMovements.connectionState ==
                         ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
+                        ),
+                      );
                     }
 
                     final movements = snapshotMovements.data ?? [];
