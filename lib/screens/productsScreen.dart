@@ -23,6 +23,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
   String _searchQuery = '';
   late ProductFilter _selectedFilter;
 
+  final List<String> _categories = [];
+  String? _selectedCategory;
+
   @override
   void initState() {
     super.initState();
@@ -35,15 +38,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
     super.dispose();
   }
 
-  void _openAddProductModal(BuildContext context) {
-    final nameController = TextEditingController();
-    final priceController = TextEditingController();
-    final quantityController = TextEditingController();
-    final minQuantityController = TextEditingController(text: '5');
-    final formKey = GlobalKey<FormState>();
+  void _openAddCategoryModal(BuildContext parentContext, StateSetter modalSetState) {
+    final newCategoryController = TextEditingController();
 
     showModalBottomSheet(
-      context: context,
+      context: parentContext,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF181524),
       shape: const RoundedRectangleBorder(
@@ -57,120 +56,306 @@ class _ProductsScreenState extends State<ProductsScreen> {
             right: 20,
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
-          child: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Novo Produto',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close, color: Color(0xFFA1A1AA)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: nameController,
-                    label: 'Nome do Produto',
-                    hint: 'Ex: Teclado Mecânico',
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Informe o nome' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTextField(
-                          controller: priceController,
-                          label: 'Preço (R\$)',
-                          hint: '0.00',
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          validator: (v) {
-                            if (v == null || v.isEmpty) return 'Informe o preço';
-                            if (double.tryParse(v.replaceAll(',', '.')) == null) return 'Inválido';
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildTextField(
-                          controller: quantityController,
-                          label: 'Qtd. Estocado',
-                          hint: '0',
-                          keyboardType: TextInputType.number,
-                          validator: (v) {
-                            if (v == null || v.isEmpty) return 'Informe a qtd.';
-                            if (int.tryParse(v) == null) return 'Inválido';
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildTextField(
-                    controller: minQuantityController,
-                    label: 'Estoque Mínimo (Alerta)',
-                    hint: '5',
-                    keyboardType: TextInputType.number,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Informe o mín.';
-                      if (int.tryParse(v) == null) return 'Inválido';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8B5CF6),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: () async {
-                        if (formKey.currentState!.validate()) {
-                          final newProduct = Product(
-                            name: nameController.text.trim(),
-                            price: double.parse(priceController.text.replaceAll(',', '.')),
-                            quantity: int.parse(quantityController.text),
-                            minQuantity: int.parse(minQuantityController.text),
-                            createdAt: DateTime.now(),
-                          );
-
-                          await _productService.addProduct(newProduct);
-                          if (ctx.mounted) Navigator.pop(ctx);
-                        }
-                      },
-                      child: const Text(
-                        'Cadastrar Produto',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+                  const Text(
+                    'Nova Categoria',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close, color: Color(0xFFA1A1AA)),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: newCategoryController,
+                label: 'Nome da Categoria',
+                hint: 'Ex: Eletrônicos',
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8B5CF6),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () {
+                    final newCat = newCategoryController.text.trim();
+                    if (newCat.isNotEmpty) {
+                      setState(() {
+                        if (!_categories.contains(newCat)) {
+                          _categories.add(newCat);
+                        }
+                      });
+                      modalSetState(() {
+                        _selectedCategory = newCat;
+                      });
+                      Navigator.pop(ctx);
+                    }
+                  },
+                  child: const Text('Salvar Categoria', style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
           ),
+        );
+      },
+    );
+  }
+
+  void _openAddProductModal(BuildContext context) {
+    final nameController = TextEditingController();
+    final costPriceController = TextEditingController();
+    final salePriceController = TextEditingController();
+    final quantityController = TextEditingController();
+    final minQuantityController = TextEditingController(text: '5');
+    final formKey = GlobalKey<FormState>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF181524),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter modalSetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 24,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Novo Produto',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            icon: const Icon(Icons.close, color: Color(0xFFA1A1AA)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: nameController,
+                        label: 'Nome do Produto',
+                        hint: 'Ex: Teclado Mecânico',
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Informe o nome' : null,
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Categoria
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Categoria',
+                            style: TextStyle(
+                              color: Color(0xFFA1A1AA),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<String>(
+                            value: _selectedCategory,
+                            dropdownColor: const Color(0xFF181524),
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              hintText: 'Selecione uma categoria',
+                              hintStyle: const TextStyle(color: Color(0xFF52525B)),
+                              filled: true,
+                              fillColor: const Color(0xFF0D0B14),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(color: Color(0xFF262135)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(color: Color(0xFF262135)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(color: Color(0xFF8B5CF6)),
+                              ),
+                            ),
+                            items: [
+                              ..._categories.map((cat) => DropdownMenuItem(
+                                value: cat,
+                                child: Text(cat),
+                              )),
+                              const DropdownMenuItem(
+                                value: '__ADD_NEW__',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.add, color: Color(0xFF8B5CF6), size: 18),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Criar categoria',
+                                      style: TextStyle(
+                                        color: Color(0xFF8B5CF6),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            onChanged: (val) {
+                              if (val == '__ADD_NEW__') {
+                                _openAddCategoryModal(ctx, modalSetState);
+                              } else {
+                                modalSetState(() {
+                                  _selectedCategory = val;
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              controller: quantityController,
+                              label: 'Qtd. Inicial',
+                              hint: '0',
+                              keyboardType: TextInputType.number,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Informe a qtd.';
+                                if (int.tryParse(v) == null) return 'Inválido';
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildTextField(
+                              controller: minQuantityController,
+                              label: 'Estoque Mínimo',
+                              hint: '5',
+                              keyboardType: TextInputType.number,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Informe o mín.';
+                                if (int.tryParse(v) == null) return 'Inválido';
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              controller: costPriceController,
+                              label: 'Preço de Custo (R\$)',
+                              hint: '0.00',
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Informe o custo';
+                                if (double.tryParse(v.replaceAll(',', '.')) == null) return 'Inválido';
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildTextField(
+                              controller: salePriceController,
+                              label: 'Preço de Venda (R\$)',
+                              hint: '0.00',
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Informe a venda';
+                                if (double.tryParse(v.replaceAll(',', '.')) == null) return 'Inválido';
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF8B5CF6),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () async {
+                            if (formKey.currentState!.validate()) {
+                              final newProduct = Product(
+                                name: nameController.text.trim(),
+                                category: _selectedCategory,
+                                costPrice: double.parse(costPriceController.text.replaceAll(',', '.')),
+                                price: double.parse(salePriceController.text.replaceAll(',', '.')),
+                                quantity: int.parse(quantityController.text),
+                                minQuantity: int.parse(minQuantityController.text),
+                                createdAt: DateTime.now(),
+                              );
+
+                              await _productService.addProduct(newProduct);
+                              if (ctx.mounted) Navigator.pop(ctx);
+                            }
+                          },
+                          child: const Text(
+                            'Cadastrar Produto',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -263,7 +448,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                   const SizedBox(width: 10),
 
-                  // Botão de Filtro Estilizado (Menu Suspenso)
+                  // Menu Suspenso de Filtro
                   PopupMenuButton<ProductFilter>(
                     initialValue: _selectedFilter,
                     tooltip: 'Filtrar produtos',
@@ -337,7 +522,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
               const SizedBox(height: 16),
 
-              // Lista de Produtos com Filtragem Aplicada
+              // Lista de Produtos
               Expanded(
                 child: StreamBuilder<List<Product>>(
                   stream: _productService.getProductsStream(),
@@ -352,7 +537,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
                     final allProducts = snapshot.data ?? [];
 
-                    // Aplicação dos Filtros de Busca e Status de Estoque
                     final filteredProducts = allProducts.where((product) {
                       final matchesSearch = product.name.toLowerCase().contains(_searchQuery);
 
@@ -434,7 +618,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'R\$ ${product.price.toStringAsFixed(2)} / un',
+                                      '${product.category ?? 'Sem categoria'} • R\$ ${product.price.toStringAsFixed(2)}',
                                       style: const TextStyle(
                                         color: Color(0xFFA1A1AA),
                                         fontSize: 13,

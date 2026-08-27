@@ -1,18 +1,39 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/movementModel.dart';
 
 class MovementService {
-  final CollectionReference _movementsRef =
-  FirebaseFirestore.instance.collection('movements');
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Adiciona uma nova movimentação
-  Future<void> addMovement(Movement movement) async {
-    await _movementsRef.add(movement.toMap());
+  Future<String?> _getCompanyId() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    final userDoc = await _db.collection('users').doc(user.uid).get();
+    return userDoc.data()?['companyId'] as String?;
   }
 
-  // Stream que traz as 5 movimentações mais recentes
-  Stream<List<Movement>> getRecentMovementsStream() {
-    return _movementsRef
+  Future<CollectionReference?> _getMovementsRef() async {
+    final companyId = await _getCompanyId();
+    if (companyId == null) return null;
+    return _db.collection('companies').doc(companyId).collection('movements');
+  }
+
+  Future<void> addMovement(Movement movement) async {
+    final ref = await _getMovementsRef();
+    if (ref == null) throw Exception('Empresa não encontrada.');
+    await ref.add(movement.toMap());
+  }
+
+  Stream<List<Movement>> getRecentMovementsStream() async* {
+    final ref = await _getMovementsRef();
+    if (ref == null) {
+      yield [];
+      return;
+    }
+
+    yield* ref
         .orderBy('createdAt', descending: true)
         .limit(5)
         .snapshots()
@@ -23,9 +44,14 @@ class MovementService {
     });
   }
 
-  // Stream que traz TODAS as movimentações ordenadas por data
-  Stream<List<Movement>> getAllMovementsStream() {
-    return _movementsRef
+  Stream<List<Movement>> getAllMovementsStream() async* {
+    final ref = await _getMovementsRef();
+    if (ref == null) {
+      yield [];
+      return;
+    }
+
+    yield* ref
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {

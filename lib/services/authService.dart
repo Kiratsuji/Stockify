@@ -1,17 +1,36 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   User? get currentUser => _auth.currentUser;
 
-  Future userSignUp(String email, String password, String username) async {
+  // Cadastro de usuário com criação do documento inicial no Firestore
+  Future<User?> userSignUp(String email, String password, String username) async {
     try {
       UserCredential resultado = await _auth.createUserWithEmailAndPassword(
-          email: email, password: password);
+        email: email,
+        password: password,
+      );
 
-      await resultado.user?.updateDisplayName(username);
-      await resultado.user?.reload();
+      final user = resultado.user;
+
+      if (user != null) {
+        await user.updateDisplayName(username);
+        await user.reload();
+
+        // 1. Cria o documento do usuário em /users/{uid}
+        // O companyId será preenchido posteriormente durante o Onboarding (Passo 3)
+        await _db.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'username': username,
+          'email': email,
+          'companyId': null,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       return _auth.currentUser;
     } on FirebaseAuthException catch (e) {
@@ -19,21 +38,34 @@ class AuthService {
     }
   }
 
-  Future login(String email, String password) async {
+  // Login padrão
+  Future<User?> login(String email, String password) async {
     try {
       UserCredential result = await _auth.signInWithEmailAndPassword(
-          email: email, password: password);
+        email: email,
+        password: password,
+      );
       return result.user;
     } on FirebaseAuthException catch (e) {
       throw Exception(e.message);
     }
   }
 
-  Future logout() async {
+  // Recupera as informações do usuário salvas no Firestore (ex: companyId)
+  Future<Map<String, dynamic>?> getUserProfile() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    final doc = await _db.collection('users').doc(user.uid).get();
+    return doc.data();
+  }
+
+  // Desconecta o usuário
+  Future<void> logout() async {
     await _auth.signOut();
   }
 
-  // Método para reautenticar o usuário antes de alterações sensíveis
+  // Reautenticação antes de alterações sensíveis
   Future<void> reauthenticate(String currentPassword) async {
     final user = _auth.currentUser;
     if (user != null && user.email != null) {
@@ -47,16 +79,20 @@ class AuthService {
     }
   }
 
-  // Atualiza nome de exibição
+  // Atualiza nome de exibição no Firebase Auth e no Firestore
   Future<void> updateUsername(String username) async {
     final user = _auth.currentUser;
     if (user != null) {
       await user.updateDisplayName(username);
       await user.reload();
+
+      await _db.collection('users').doc(user.uid).update({
+        'username': username,
+      });
     }
   }
 
-  // Envia e-mail de verificação para alteração de e-mail
+  // Solicita verificação/alteração de e-mail
   Future<void> updateEmail(String newEmail) async {
     final user = _auth.currentUser;
     if (user != null) {

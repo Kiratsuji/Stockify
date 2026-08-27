@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:stockify/firebase_options.dart';
+import 'package:stockify/screens/company/companySelectionScreen.dart';
 import 'package:stockify/screens/dashboard.dart';
 import 'package:stockify/screens/welcome.dart';
 
@@ -30,7 +32,6 @@ class MyApp extends StatelessWidget {
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
-          // Aguarda a verificação de estado do Firebase
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               backgroundColor: Color(0xFF0D0B14),
@@ -42,12 +43,34 @@ class MyApp extends StatelessWidget {
             );
           }
 
-          // Se já existe uma sessão ativa (usuário não clicou em "Sair")
           if (snapshot.hasData && snapshot.data != null) {
-            return const DashboardScreen();
+            final user = snapshot.data!;
+            return FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+              builder: (context, userSnapshot) {
+                if (userSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Scaffold(
+                    backgroundColor: Color(0xFF0D0B14),
+                    body: Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
+                      ),
+                    ),
+                  );
+                }
+
+                if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                  final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                  if (userData != null && userData['companyId'] != null && (userData['companyId'] as String).isNotEmpty) {
+                    return const DashboardScreen();
+                  }
+                }
+
+                return const CompanySelectionScreen();
+              },
+            );
           }
 
-          // Caso esteja deslogado
           return const WelcomeScreen();
         },
       ),
