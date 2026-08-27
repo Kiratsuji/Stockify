@@ -22,4 +22,16 @@ class MovementService {
       }).toList();
     });
   }
+
+  // Stream que traz TODAS as movimentações ordenadas por data
+  Stream<List<Movement>> getAllMovementsStream() {
+    return _movementsRef
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return Movement.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    });
+  }
 }

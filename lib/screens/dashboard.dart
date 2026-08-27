@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:stockify/screens/movementsScreen.dart';
 import '../models/movementModel.dart';
 import '../models/productModel.dart';
 import '../services/movementServices.dart';
@@ -25,7 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _screens = [
       const _DashboardHomeBody(),
       const ProductsScreen(),
-      const Center(child: Text('Tela de Movimentações', style: TextStyle(color: Colors.white))),
+      const MovementsScreen(),
       const Center(child: Text('Mais Opções', style: TextStyle(color: Colors.white))),
     ];
   }

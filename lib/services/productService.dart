@@ -19,4 +19,16 @@ class ProductService {
       }).toList();
     });
   }
+
+  Future<Product?> getProductById(String id) async {
+    final doc = await _productsRef.doc(id).get();
+    if (doc.exists && doc.data() != null) {
+      return Product.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+    }
+    return null;
+  }
+
+  Future<void> updateProductQuantity(String id, int newQuantity) async {
+    await _productsRef.doc(id).update({'quantity': newQuantity});
+  }
 }
