@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:stockify/screens/movementsScreen.dart';
+import 'package:stockify/screens/profileScreen.dart';
 import '../models/movementModel.dart';
 import '../models/productModel.dart';
 import '../services/movementServices.dart';
@@ -17,7 +18,6 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
 
-  // Lista de telas que correspondem aos itens da barra inferior
   late final List<Widget> _screens;
 
   @override
@@ -27,7 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       const _DashboardHomeBody(),
       const ProductsScreen(),
       const MovementsScreen(),
-      const Center(child: Text('Mais Opções', style: TextStyle(color: Colors.white))),
+      const ProfileScreen(),
     ];
   }
 
@@ -64,8 +64,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label: 'Mov.',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.more_horiz_rounded),
-            label: 'Mais',
+            icon: Icon(Icons.person_outline_rounded),
+            label: 'Perfil',
           ),
         ],
       ),
@@ -73,7 +73,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-// Widget privado contendo todo o conteúdo original do seu início/dashboard
 class _DashboardHomeBody extends StatelessWidget {
   const _DashboardHomeBody();
 
@@ -81,8 +80,9 @@ class _DashboardHomeBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final ProductService productService = ProductService();
     final MovementService movementService = MovementService();
-    final String username =
-        FirebaseAuth.instance.currentUser?.displayName ?? 'Usuário';
+    final user = FirebaseAuth.instance.currentUser;
+    final String username = user?.displayName ?? 'Usuário';
+    final String initialLetter = username.isNotEmpty ? username[0].toUpperCase() : 'U';
 
     return SafeArea(
       child: StreamBuilder<List<Product>>(
@@ -107,7 +107,7 @@ class _DashboardHomeBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Cabeçalho
+                // Cabeçalho com Avatar Clicável
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -132,12 +132,26 @@ class _DashboardHomeBody extends StatelessWidget {
                         ),
                       ],
                     ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(
-                        Icons.notifications_none_rounded,
-                        color: Colors.white,
-                        size: 28,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfileScreen(),
+                          ),
+                        );
+                      },
+                      child: CircleAvatar(
+                        radius: 22,
+                        backgroundColor: const Color(0xFF8B5CF6),
+                        child: Text(
+                          initialLetter,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -242,24 +256,6 @@ class _DashboardHomeBody extends StatelessWidget {
                       }).toList(),
                     );
                   },
-                ),
-
-                const SizedBox(height: 8),
-
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: () {},
-                    label: const Text(
-                      'Ver tudo',
-                      style: TextStyle(color: Color(0xFF8B5CF6)),
-                    ),
-                    icon: const Icon(
-                      Icons.arrow_forward_rounded,
-                      size: 16,
-                      color: Color(0xFF8B5CF6),
-                    ),
-                  ),
                 ),
               ],
             ),

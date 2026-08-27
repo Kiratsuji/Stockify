@@ -12,7 +12,6 @@ class ProductsScreen extends StatefulWidget {
 class _ProductsScreenState extends State<ProductsScreen> {
   final ProductService _productService = ProductService();
 
-  // Função para abrir o Modal de Cadastro de Produto
   void _openAddProductModal(BuildContext context) {
     final nameController = TextEditingController();
     final priceController = TextEditingController();
@@ -60,8 +59,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // Campo Nome
                   _buildTextField(
                     controller: nameController,
                     label: 'Nome do Produto',
@@ -69,8 +66,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     validator: (v) => v == null || v.trim().isEmpty ? 'Informe o nome' : null,
                   ),
                   const SizedBox(height: 12),
-
-                  // Linha com Preço e Quantidade Inicial
                   Row(
                     children: [
                       Expanded(
@@ -103,8 +98,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-
-                  // Campo Estoque Mínimo
                   _buildTextField(
                     controller: minQuantityController,
                     label: 'Estoque Mínimo (Alerta)',
@@ -117,8 +110,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-
-                  // Botão Cadastrar
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -166,26 +157,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0D0B14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0D0B14),
-        elevation: 0,
-        title: const Text(
-          'Estoque de Produtos',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 10),
-
-              // Botão para Adicionar Novo Produto no topo da tela
+              const SizedBox(height: 16),
+              const Text(
+                'Estoque de Produtos',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -210,8 +197,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Lista em tempo real dos produtos cadastrados
               Expanded(
                 child: StreamBuilder<List<Product>>(
                   stream: _productService.getProductsStream(),
@@ -256,7 +241,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           ),
                           child: Row(
                             children: [
-                              // Ícone com indicação visual de estoque
                               Container(
                                 width: 44,
                                 height: 44,
@@ -273,8 +257,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 ),
                               ),
                               const SizedBox(width: 14),
-
-                              // Informações do Produto (Nome e Preço Unitário)
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,8 +280,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   ],
                                 ),
                               ),
-
-                              // Quantidade em estoque e aviso de estoque baixo
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
@@ -339,7 +319,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  // Componente de Campo de Texto reaproveitável
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,

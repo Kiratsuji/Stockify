@@ -15,7 +15,6 @@ class _MovementsScreenState extends State<MovementsScreen> {
   final MovementService _movementService = MovementService();
   final ProductService _productService = ProductService();
 
-  // Modal para cadastrar Entrada ou Saída
   void _openAddMovementModal(BuildContext context) {
     Product? selectedProduct;
     String movementType = 'Entrada';
@@ -64,8 +63,6 @@ class _MovementsScreenState extends State<MovementsScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-
-                      // Seleção de Tipo (Entrada / Saída)
                       Row(
                         children: [
                           Expanded(
@@ -128,8 +125,6 @@ class _MovementsScreenState extends State<MovementsScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-
-                      // Dropdown de Seleção de Produto
                       const Text(
                         'Produto',
                         style: TextStyle(
@@ -176,8 +171,6 @@ class _MovementsScreenState extends State<MovementsScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-
-                      // Campo Quantidade
                       const Text(
                         'Quantidade',
                         style: TextStyle(
@@ -216,8 +209,6 @@ class _MovementsScreenState extends State<MovementsScreen> {
                         },
                       ),
                       const SizedBox(height: 24),
-
-                      // Botão Registrar
                       SizedBox(
                         width: double.infinity,
                         height: 50,
@@ -233,7 +224,6 @@ class _MovementsScreenState extends State<MovementsScreen> {
                                 selectedProduct != null) {
                               final int qty = int.parse(quantityController.text);
 
-                              // 1. Cria a movimentação
                               final movement = Movement(
                                 productId: selectedProduct!.id,
                                 productName: selectedProduct!.name,
@@ -242,12 +232,10 @@ class _MovementsScreenState extends State<MovementsScreen> {
                                 createdAt: DateTime.now(),
                               );
 
-                              // 2. Calcula novo estoque
                               final newQuantity = movementType == 'Entrada'
                                   ? selectedProduct!.quantity + qty
                                   : selectedProduct!.quantity - qty;
 
-                              // 3. Salva no Firebase
                               await _movementService.addMovement(movement);
                               if (selectedProduct!.id != null) {
                                 await _productService.updateProductQuantity(
@@ -284,26 +272,22 @@ class _MovementsScreenState extends State<MovementsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0D0B14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0D0B14),
-        elevation: 0,
-        title: const Text(
-          'Histórico de Movimentações',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 10),
-
-              // Botão Superior para Adicionar Movimentação
+              const SizedBox(height: 16),
+              const Text(
+                'Histórico de Movimentações',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -328,8 +312,6 @@ class _MovementsScreenState extends State<MovementsScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Lista com o Histórico Completo em tempo real
               Expanded(
                 child: StreamBuilder<List<Movement>>(
                   stream: _movementService.getAllMovementsStream(),
@@ -373,7 +355,6 @@ class _MovementsScreenState extends State<MovementsScreen> {
                           ),
                           child: Row(
                             children: [
-                              // Ícone Entrada / Saída
                               CircleAvatar(
                                 radius: 22,
                                 backgroundColor: isEntry
@@ -390,8 +371,6 @@ class _MovementsScreenState extends State<MovementsScreen> {
                                 ),
                               ),
                               const SizedBox(width: 14),
-
-                              // Informações do Produto e Data
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -415,8 +394,6 @@ class _MovementsScreenState extends State<MovementsScreen> {
                                   ],
                                 ),
                               ),
-
-                              // Quantidade movimentada (+ / -)
                               Text(
                                 '${isEntry ? '+' : '-'}${item.quantity}',
                                 style: TextStyle(
