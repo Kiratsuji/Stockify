@@ -19,10 +19,10 @@ class WelcomeScreen extends StatelessWidget {
               // --- SUPERIOR SECTION ---
               Column(
                 children: [
-                  Icon(
-                    Icons.view_in_ar_rounded,
-                    size: 90,
-                    color: const Color(0xFF8B5CF6),
+                  Image.asset(
+                    'assets/icon/app_icon.png',
+                    height: 90,
+                    width: 90,
                   ),
                   const SizedBox(height: 16),
                   const Text(
