@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:stockify/screens/movementsScreen.dart';
 import 'package:stockify/screens/profileScreen.dart';
+import 'package:stockify/screens/welcome.dart';
 import '../models/movementModel.dart';
 import '../models/productModel.dart';
 import '../services/authService.dart';
@@ -168,6 +169,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _authService.logout();
+
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+                            (route) => false,
+                      );
+                    }
                   },
                 ),
               ],
@@ -278,7 +287,6 @@ class _DashboardHomeBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Cabeçalho com Avatar Clicável
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -359,7 +367,6 @@ class _DashboardHomeBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Cards Clicáveis
                 Row(
                   children: [
                     Expanded(
@@ -387,7 +394,6 @@ class _DashboardHomeBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // Botão "Ver produtos" / "Ver tudo"
                 SizedBox(
                   width: double.infinity,
                   height: 44,
@@ -414,7 +420,6 @@ class _DashboardHomeBody extends StatelessWidget {
 
                 const SizedBox(height: 28),
 
-                // Seção de Movimentações Recentes
                 const Text(
                   'Movimentações recentes',
                   style: TextStyle(

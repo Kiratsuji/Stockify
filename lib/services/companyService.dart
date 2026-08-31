@@ -33,20 +33,15 @@ class CompanyService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Usuário não autenticado.');
 
-    // Garante um código de convite único
-    String inviteCode;
-    while (true) {
-      inviteCode = _generateInviteCode();
-      final existing = await _db
-          .collection('companies')
-          .where('inviteCode', isEqualTo: inviteCode)
-          .limit(1)
-          .get();
-      if (existing.docs.isEmpty) break;
-    }
+    String inviteCode = _generateInviteCode(); // gere o código de convite
 
     final companyRef = _db.collection('companies').doc();
-    await companyRef.set({
+    final userRef = _db.collection('users').doc(user.uid);
+
+    // Executa em lote (Batch)
+    final batch = _db.batch();
+
+    batch.set(companyRef, {
       ...companyData,
       'ownerId': user.uid,
       'inviteCode': inviteCode,
@@ -54,9 +49,11 @@ class CompanyService {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    await _db.collection('users').doc(user.uid).set({
+    batch.set(userRef, {
       'companyId': companyRef.id,
     }, SetOptions(merge: true));
+
+    await batch.commit();
 
     return companyRef.id;
   }
