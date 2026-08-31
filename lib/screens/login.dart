@@ -109,6 +109,10 @@ class _LoginState extends State<LoginScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: loading ? null : login,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C3AED),
+                      foregroundColor: Colors.white
+                  ),
                   child: loading
                       ? const SizedBox(
                     height: 20,

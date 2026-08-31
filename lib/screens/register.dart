@@ -137,6 +137,10 @@ class _RegisterState extends State<RegisterScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: userRegister,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C3AED),
+                      foregroundColor: Colors.white
+                  ),
                   child: const Text('Criar conta'),
                 ),
               ),
