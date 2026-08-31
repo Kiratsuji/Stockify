@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:stockify/screens/company/createCompanyStep1Screen.dart';
+import 'package:stockify/screens/company/joinCompanyScreen.dart';
+import 'package:stockify/screens/welcome.dart';
 import 'package:stockify/services/authService.dart';
 
 class CompanySelectionScreen extends StatelessWidget {
@@ -20,6 +22,12 @@ class CompanySelectionScreen extends StatelessWidget {
             tooltip: 'Sair',
             onPressed: () async {
               await authService.logout();
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+                      (route) => false,
+                );
+              }
             },
           ),
         ],
@@ -89,10 +97,10 @@ class CompanySelectionScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Funcionalidade de entrar em empresa em breve!'),
-                          backgroundColor: Color(0xFF181524),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const JoinCompanyScreen(),
                         ),
                       );
                     },

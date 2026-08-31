@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/productModel.dart';
+import '../services/companyService.dart';
 import '../services/productService.dart';
 
 enum ProductFilter { all, lowStock, zeroStock }
@@ -18,13 +19,16 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   final ProductService _productService = ProductService();
+  final CompanyService _companyService = CompanyService();
   final TextEditingController _searchController = TextEditingController();
 
   String _searchQuery = '';
   late ProductFilter _selectedFilter;
 
-  final List<String> _categories = [];
-  String? _selectedCategory;
+  // As categorias não vivem mais numa lista local: elas são lidas e
+  // gravadas direto no documento da empresa (via CompanyService), então
+  // persistem entre telas e sessões.
+  String? _selectedCategoryFilter;
 
   @override
   void initState() {
@@ -38,7 +42,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     super.dispose();
   }
 
-  void _openAddCategoryModal(BuildContext parentContext, StateSetter modalSetState) {
+  void _openAddCategoryModal(BuildContext parentContext, StateSetter modalSetState, void Function(String) onCreated) {
     final newCategoryController = TextEditingController();
 
     showModalBottomSheet(
@@ -94,18 +98,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     final newCat = newCategoryController.text.trim();
-                    if (newCat.isNotEmpty) {
-                      setState(() {
-                        if (!_categories.contains(newCat)) {
-                          _categories.add(newCat);
-                        }
-                      });
-                      modalSetState(() {
-                        _selectedCategory = newCat;
-                      });
-                      Navigator.pop(ctx);
+                    if (newCat.isEmpty) return;
+
+                    Navigator.pop(ctx);
+                    // Otimista: já seleciona a categoria no dropdown mesmo
+                    // antes do Firestore confirmar a escrita.
+                    onCreated(newCat);
+                    try {
+                      await _companyService.addCategory(newCat);
+                    } catch (e) {
+                      if (parentContext.mounted) {
+                        ScaffoldMessenger.of(parentContext).showSnackBar(
+                          SnackBar(content: Text('Erro ao salvar categoria: $e')),
+                        );
+                      }
                     }
                   },
                   child: const Text('Salvar Categoria', style: TextStyle(color: Colors.white)),
@@ -118,6 +126,76 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
+  Widget _buildCategoryDropdown({
+    required String? value,
+    required StateSetter modalSetState,
+    required void Function(String?) onSelected,
+    required BuildContext modalContext,
+  }) {
+    return StreamBuilder<List<String>>(
+      stream: _companyService.getCategoriesStream(),
+      builder: (context, snapshot) {
+        final categories = snapshot.data ?? [];
+
+        return DropdownButtonFormField<String>(
+          value: categories.contains(value) ? value : null,
+          dropdownColor: const Color(0xFF181524),
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Selecione uma categoria',
+            hintStyle: const TextStyle(color: Color(0xFF52525B)),
+            filled: true,
+            fillColor: const Color(0xFF0D0B14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF262135)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF262135)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF8B5CF6)),
+            ),
+          ),
+          items: [
+            ...categories.map((cat) => DropdownMenuItem(
+              value: cat,
+              child: Text(cat),
+            )),
+            const DropdownMenuItem(
+              value: '__ADD_NEW__',
+              child: Row(
+                children: [
+                  Icon(Icons.add, color: Color(0xFF8B5CF6), size: 18),
+                  SizedBox(width: 8),
+                  Text(
+                    'Criar categoria',
+                    style: TextStyle(
+                      color: Color(0xFF8B5CF6),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          onChanged: (val) {
+            if (val == '__ADD_NEW__') {
+              _openAddCategoryModal(modalContext, modalSetState, (newCat) {
+                modalSetState(() => onSelected(newCat));
+              });
+            } else {
+              onSelected(val);
+            }
+          },
+        );
+      },
+    );
+  }
+
   void _openAddProductModal(BuildContext context) {
     final nameController = TextEditingController();
     final costPriceController = TextEditingController();
@@ -125,6 +203,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final quantityController = TextEditingController();
     final minQuantityController = TextEditingController(text: '5');
     final formKey = GlobalKey<FormState>();
+    String? selectedCategory;
 
     showModalBottomSheet(
       context: context,
@@ -189,60 +268,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            value: _selectedCategory,
-                            dropdownColor: const Color(0xFF181524),
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              hintText: 'Selecione uma categoria',
-                              hintStyle: const TextStyle(color: Color(0xFF52525B)),
-                              filled: true,
-                              fillColor: const Color(0xFF0D0B14),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: Color(0xFF262135)),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: Color(0xFF262135)),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: Color(0xFF8B5CF6)),
-                              ),
-                            ),
-                            items: [
-                              ..._categories.map((cat) => DropdownMenuItem(
-                                value: cat,
-                                child: Text(cat),
-                              )),
-                              const DropdownMenuItem(
-                                value: '__ADD_NEW__',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.add, color: Color(0xFF8B5CF6), size: 18),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Criar categoria',
-                                      style: TextStyle(
-                                        color: Color(0xFF8B5CF6),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            onChanged: (val) {
-                              if (val == '__ADD_NEW__') {
-                                _openAddCategoryModal(ctx, modalSetState);
-                              } else {
-                                modalSetState(() {
-                                  _selectedCategory = val;
-                                });
-                              }
-                            },
+                          _buildCategoryDropdown(
+                            value: selectedCategory,
+                            modalSetState: modalSetState,
+                            modalContext: ctx,
+                            onSelected: (val) => modalSetState(() => selectedCategory = val),
                           ),
                         ],
                       ),
@@ -328,7 +358,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             if (formKey.currentState!.validate()) {
                               final newProduct = Product(
                                 name: nameController.text.trim(),
-                                category: _selectedCategory,
+                                category: selectedCategory,
                                 costPrice: double.parse(costPriceController.text.replaceAll(',', '.')),
                                 price: double.parse(salePriceController.text.replaceAll(',', '.')),
                                 quantity: int.parse(quantityController.text),
@@ -342,6 +372,232 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           },
                           child: const Text(
                             'Cadastrar Produto',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _openEditProductModal(BuildContext context, Product product) {
+    final nameController = TextEditingController(text: product.name);
+    final costPriceController = TextEditingController(text: product.costPrice.toStringAsFixed(2));
+    final salePriceController = TextEditingController(text: product.price.toStringAsFixed(2));
+    final minQuantityController = TextEditingController(text: product.minQuantity.toString());
+    final formKey = GlobalKey<FormState>();
+    String? selectedCategory = product.category;
+    bool isSaving = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF181524),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter modalSetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 24,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Editar Produto',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            icon: const Icon(Icons.close, color: Color(0xFFA1A1AA)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: nameController,
+                        label: 'Nome do Produto',
+                        hint: 'Ex: Teclado Mecânico',
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Informe o nome' : null,
+                      ),
+                      const SizedBox(height: 12),
+
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Categoria',
+                            style: TextStyle(
+                              color: Color(0xFFA1A1AA),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          _buildCategoryDropdown(
+                            value: selectedCategory,
+                            modalSetState: modalSetState,
+                            modalContext: ctx,
+                            onSelected: (val) => modalSetState(() => selectedCategory = val),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Quantidade em estoque: exibida, mas travada. Só muda
+                      // por movimentação (tela "Mov."), nunca pela edição.
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0D0B14),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF262135)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.lock_outline_rounded, color: Color(0xFFA1A1AA), size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Estoque atual: ${product.quantity} un',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const Text(
+                                    'Só é possível alterar por uma movimentação.',
+                                    style: TextStyle(color: Color(0xFFA1A1AA), fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      _buildTextField(
+                        controller: minQuantityController,
+                        label: 'Estoque Mínimo',
+                        hint: '5',
+                        keyboardType: TextInputType.number,
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Informe o mín.';
+                          if (int.tryParse(v) == null) return 'Inválido';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              controller: costPriceController,
+                              label: 'Preço de Custo (R\$)',
+                              hint: '0.00',
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Informe o custo';
+                                if (double.tryParse(v.replaceAll(',', '.')) == null) return 'Inválido';
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildTextField(
+                              controller: salePriceController,
+                              label: 'Preço de Venda (R\$)',
+                              hint: '0.00',
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Informe a venda';
+                                if (double.tryParse(v.replaceAll(',', '.')) == null) return 'Inválido';
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF8B5CF6),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: isSaving
+                              ? null
+                              : () async {
+                            if (!formKey.currentState!.validate() || product.id == null) return;
+
+                            modalSetState(() => isSaving = true);
+                            try {
+                              await _productService.updateProduct(
+                                product.id!,
+                                name: nameController.text.trim(),
+                                category: selectedCategory,
+                                costPrice: double.parse(costPriceController.text.replaceAll(',', '.')),
+                                price: double.parse(salePriceController.text.replaceAll(',', '.')),
+                                minQuantity: int.parse(minQuantityController.text),
+                              );
+                              if (ctx.mounted) Navigator.pop(ctx);
+                            } catch (e) {
+                              modalSetState(() => isSaving = false);
+                              if (ctx.mounted) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(content: Text('Erro ao salvar: $e')),
+                                );
+                              }
+                            }
+                          },
+                          child: isSaving
+                              ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                              : const Text(
+                            'Salvar Alterações',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -406,7 +662,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Campo de Busca + Menu Suspenso de Filtro
+              // Campo de Busca + Menu Suspenso de Filtro de Estoque
               Row(
                 children: [
                   Expanded(
@@ -448,7 +704,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                   const SizedBox(width: 10),
 
-                  // Menu Suspenso de Filtro
+                  // Menu Suspenso de Filtro por status de estoque
                   PopupMenuButton<ProductFilter>(
                     initialValue: _selectedFilter,
                     tooltip: 'Filtrar produtos',
@@ -520,7 +776,50 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ],
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+
+              // Chips de filtro por categoria
+              StreamBuilder<List<String>>(
+                stream: _companyService.getCategoriesStream(),
+                builder: (context, snapshot) {
+                  final categories = snapshot.data ?? [];
+                  if (categories.isEmpty) return const SizedBox.shrink();
+
+                  // Se a categoria selecionada foi removida/renomeada, evita
+                  // ficar filtrando por algo que não existe mais.
+                  if (_selectedCategoryFilter != null && !categories.contains(_selectedCategoryFilter)) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) setState(() => _selectedCategoryFilter = null);
+                    });
+                  }
+
+                  return SizedBox(
+                    height: 36,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      children: [
+                        _buildCategoryChip(label: 'Todas', selected: _selectedCategoryFilter == null, onTap: () {
+                          setState(() => _selectedCategoryFilter = null);
+                        }),
+                        const SizedBox(width: 8),
+                        ...categories.map((cat) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: _buildCategoryChip(
+                            label: cat,
+                            selected: _selectedCategoryFilter == cat,
+                            onTap: () {
+                              setState(() => _selectedCategoryFilter = cat);
+                            },
+                          ),
+                        )),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 12),
 
               // Lista de Produtos
               Expanded(
@@ -540,20 +839,23 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     final filteredProducts = allProducts.where((product) {
                       final matchesSearch = product.name.toLowerCase().contains(_searchQuery);
 
-                      bool matchesFilter = true;
+                      bool matchesStockFilter = true;
                       if (_selectedFilter == ProductFilter.lowStock) {
-                        matchesFilter = product.quantity <= product.minQuantity && product.quantity > 0;
+                        matchesStockFilter = product.quantity <= product.minQuantity && product.quantity > 0;
                       } else if (_selectedFilter == ProductFilter.zeroStock) {
-                        matchesFilter = product.quantity == 0;
+                        matchesStockFilter = product.quantity == 0;
                       }
 
-                      return matchesSearch && matchesFilter;
+                      final matchesCategory =
+                          _selectedCategoryFilter == null || product.category == _selectedCategoryFilter;
+
+                      return matchesSearch && matchesStockFilter && matchesCategory;
                     }).toList();
 
                     if (filteredProducts.isEmpty) {
                       return Center(
                         child: Text(
-                          _searchQuery.isNotEmpty || _selectedFilter != ProductFilter.all
+                          _searchQuery.isNotEmpty || _selectedFilter != ProductFilter.all || _selectedCategoryFilter != null
                               ? 'Nenhum produto encontrado.'
                               : 'Nenhum produto cadastrado no estoque.',
                           style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 14),
@@ -576,92 +878,95 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           statusColor = Colors.amberAccent;
                         }
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF181524),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isZeroStock || isLowStock
-                                  ? statusColor.withOpacity(0.4)
-                                  : const Color(0xFF262135),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  Icons.inventory_2_outlined,
-                                  color: statusColor,
-                                  size: 22,
-                                ),
+                        return GestureDetector(
+                          onTap: () => _openEditProductModal(context, product),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF181524),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isZeroStock || isLowStock
+                                    ? statusColor.withOpacity(0.4)
+                                    : const Color(0xFF262135),
                               ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.inventory_2_outlined,
+                                    color: statusColor,
+                                    size: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        product.name,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${product.category ?? 'Sem categoria'} • R\$ ${product.price.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          color: Color(0xFFA1A1AA),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      product.name,
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      '${product.quantity} un',
+                                      style: TextStyle(
+                                        color: isZeroStock || isLowStock ? statusColor : Colors.white,
                                         fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${product.category ?? 'Sem categoria'} • R\$ ${product.price.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        color: Color(0xFFA1A1AA),
-                                        fontSize: 13,
+                                    if (isZeroStock) ...[
+                                      const SizedBox(height: 2),
+                                      const Text(
+                                        'Estoque Zerado',
+                                        style: TextStyle(
+                                          color: Colors.redAccent,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                    ),
+                                    ] else if (isLowStock) ...[
+                                      const SizedBox(height: 2),
+                                      const Text(
+                                        'Estoque Baixo',
+                                        style: TextStyle(
+                                          color: Colors.amberAccent,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    '${product.quantity} un',
-                                    style: TextStyle(
-                                      color: isZeroStock || isLowStock ? statusColor : Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  if (isZeroStock) ...[
-                                    const SizedBox(height: 2),
-                                    const Text(
-                                      'Estoque Zerado',
-                                      style: TextStyle(
-                                        color: Colors.redAccent,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ] else if (isLowStock) ...[
-                                    const SizedBox(height: 2),
-                                    const Text(
-                                      'Estoque Baixo',
-                                      style: TextStyle(
-                                        color: Colors.amberAccent,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -670,6 +975,36 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF8B5CF6).withOpacity(0.2) : const Color(0xFF181524),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? const Color(0xFF8B5CF6) : const Color(0xFF262135),
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? const Color(0xFF8B5CF6) : const Color(0xFFA1A1AA),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),

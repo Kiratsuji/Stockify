@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:stockify/screens/movementsScreen.dart';
 import 'package:stockify/screens/profileScreen.dart';
 import '../models/movementModel.dart';
 import '../models/productModel.dart';
 import '../services/authService.dart';
+import '../services/companyService.dart';
 import '../services/movementServices.dart';
 import '../services/productService.dart';
 import 'productsScreen.dart';
@@ -20,12 +22,88 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
   ProductFilter _productsInitialFilter = ProductFilter.all;
   final AuthService _authService = AuthService();
+  final CompanyService _companyService = CompanyService();
 
   void _navigateToProducts({ProductFilter filter = ProductFilter.all}) {
     setState(() {
       _productsInitialFilter = filter;
       _currentIndex = 1;
     });
+  }
+
+  void _showCompanyInfoDialog(BuildContext context) async {
+    final company = await _companyService.getCurrentCompany();
+    if (!context.mounted) return;
+
+    if (company == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível carregar os dados da empresa.')),
+      );
+      return;
+    }
+
+    final String name = company['companyName'] ?? company['name'] ?? 'Empresa';
+    final String inviteCode = company['inviteCode'] ?? '------';
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF181524),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Compartilhe este código para outras pessoas entrarem na sua empresa:',
+                style: TextStyle(color: Color(0xFFA1A1AA), fontSize: 13),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D0B14),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF262135)),
+                ),
+                child: Text(
+                  inviteCode,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 8,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Fechar', style: TextStyle(color: Color(0xFFA1A1AA))),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF8B5CF6),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: inviteCode));
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('Código copiado!')),
+                );
+              },
+              child: const Text('Copiar código', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showMoreMenu(BuildContext context) {
@@ -60,6 +138,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       context,
                       MaterialPageRoute(builder: (context) => const ProfileScreen()),
                     );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.business_center_outlined, color: Color(0xFF8B5CF6)),
+                  title: const Text('Minha Empresa', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showCompanyInfoDialog(context);
                   },
                 ),
                 ListTile(

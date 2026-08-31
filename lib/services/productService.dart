@@ -59,7 +59,31 @@ class ProductService {
     return null;
   }
 
-  // Atualiza quantidade
+  // Atualiza os dados cadastrais do produto (nome, categoria, preços,
+  // estoque mínimo). Note que 'quantity' NÃO é um parâmetro aqui de
+  // propósito: a quantidade em estoque só pode mudar através de uma
+  // movimentação (ver MovementService.addMovement +
+  // updateProductQuantity), nunca por uma edição direta do cadastro.
+  Future<void> updateProduct(
+      String id, {
+        required String name,
+        String? category,
+        required double costPrice,
+        required double price,
+        required int minQuantity,
+      }) async {
+    final ref = await _getProductsRef();
+    if (ref == null) throw Exception('Empresa não encontrada.');
+    await ref.doc(id).update({
+      'name': name,
+      'category': category,
+      'costPrice': costPrice,
+      'price': price,
+      'minQuantity': minQuantity,
+    });
+  }
+
+  // Atualiza quantidade — uso exclusivo do fluxo de movimentação
   Future<void> updateProductQuantity(String id, int newQuantity) async {
     final ref = await _getProductsRef();
     if (ref == null) throw Exception('Empresa não encontrada.');

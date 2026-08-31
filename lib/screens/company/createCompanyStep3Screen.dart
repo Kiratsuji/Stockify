@@ -1,9 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:stockify/models/productModel.dart';
 import 'package:stockify/screens/dashboard.dart';
 import 'package:stockify/screens/util/screenUtils.dart';
+import 'package:stockify/services/companyService.dart';
+import 'package:stockify/services/productService.dart';
 
 class CreateCompanyStep3Screen extends StatefulWidget {
   final Map<String, dynamic> companyData;
@@ -19,6 +19,8 @@ class CreateCompanyStep3Screen extends StatefulWidget {
 
 class _CreateCompanyStep3ScreenState extends State<CreateCompanyStep3Screen> {
   final _formKey = GlobalKey<FormState>();
+  final CompanyService _companyService = CompanyService();
+  final ProductService _productService = ProductService();
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
@@ -26,6 +28,8 @@ class _CreateCompanyStep3ScreenState extends State<CreateCompanyStep3Screen> {
   final TextEditingController costPriceController = TextEditingController();
   final TextEditingController salePriceController = TextEditingController();
 
+  // Categorias criadas durante o onboarding. Vão junto no momento em que a
+  // empresa é efetivamente criada (_finishSetup), então não se perdem mais.
   final List<String> categories = [];
   String? selectedCategory;
   bool isLoading = false;
@@ -121,28 +125,19 @@ class _CreateCompanyStep3ScreenState extends State<CreateCompanyStep3Screen> {
     setState(() => isLoading = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      // 1. Cria a empresa já com as categorias do onboarding e o código de
+      // convite (necessário para outras pessoas entrarem depois), e vincula
+      // o usuário atual como dono.
+      await _companyService.createCompany(
+        companyData: widget.companyData,
+        categories: categories,
+      );
 
-      // 1. Cria a empresa no Firestore
-      final companyRef = await FirebaseFirestore.instance.collection('companies').add({
-        ...widget.companyData,
-        'ownerId': user.uid,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // 2. Atualiza o usuário com a referência da empresa criada
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'companyId': companyRef.id,
-      }, SetOptions(merge: true));
-
-      // 3. Cadastra o primeiro produto caso preenchido
+      // 2. Cadastra o primeiro produto, se preenchido. Nesse ponto o
+      // companyId do usuário já foi atualizado, então o ProductService
+      // consegue resolver a empresa normalmente.
       if (firstProduct != null) {
-        await FirebaseFirestore.instance
-            .collection('companies')
-            .doc(companyRef.id)
-            .collection('products')
-            .add(firstProduct.toMap());
+        await _productService.addProduct(firstProduct);
       }
 
       if (mounted) {
@@ -155,7 +150,7 @@ class _CreateCompanyStep3ScreenState extends State<CreateCompanyStep3Screen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao concluir cadastro: $e')),
+          SnackBar(content: Text('Erro ao concluir cadastro: ${e.toString().replaceAll('Exception: ', '')}')),
         );
       }
     } finally {
